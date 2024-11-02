@@ -1,0 +1,9 @@
+# ignoring DragonRuby default files that people might not have license to; these aren't used in the jam entry anyway
+sprites/circle/*
+sprites/hexagon/*
+sprites/isometric/*
+sprites/misc/*
+sprites/square/*
+sprites/t-pose/*
+sprites/tile/*
+sprites/triangle/*
