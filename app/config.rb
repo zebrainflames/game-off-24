@@ -11,4 +11,6 @@ module Config
   TILE_SIZE = 32
   TILES_HORIZONTAL = 40
   TILES_VERTICAL = 34
+  # Physics
+  GRAVITY = 2.4
 end

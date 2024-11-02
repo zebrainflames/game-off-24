@@ -9,7 +9,7 @@ class Game
   attr_accessor :level
 
   def initialize(args)
-    @hero = Hero.new(args.grid.w / 2.0, args.grid.h / 2.0, 16, 16, Config::SPRITE_HERO)
+    @hero = Hero.new(128.from_left, args.grid.h / 2.0, 16, 16, Config::SPRITE_HERO)
     @level = Level.new
   end
 
@@ -20,7 +20,7 @@ class Game
   end
 
   def input
-    @hero.update(inputs.left_right, inputs.up_down)
+    @hero.input(inputs.left_right, inputs.up_down)
 
     return unless inputs.keyboard.key_down.f
 
@@ -42,47 +42,58 @@ class Game
                 end
 
     if overlap_x.abs < overlap_y.abs
+      dynamic.vx = 0.0
       dynamic.x = if dynamic.x < tile.x
                     tile.x - dynamic.w
                   else
                     tile.x + tile.w
                   end
     else
+      dynamic.vy = 0.0
       dynamic.y = if dynamic.y < tile.y
                     tile.y - dynamic.h
                   else
+                    dynamic.on_ground = true
                     tile.y + tile.h
                   end
     end
   end
 
-  def find_tile_collisions(dynamic, tiles)
-    tiles.map do |tile|
-      args.geometry.find_intersect_rect(dynamic, tile)
-    end.compact
-  end
-
-  def handle_collisions(max_iterations = 3)
-    iters = 0
-
-    # tiles
-    loop do
-      collisions = find_tile_collisions(@hero, @level.tiles)
-      break if collisions.empty? || iters >= max_iterations
-
-      collisions.each do |collider|
-        resolve_tile_collision(@hero, collider)
+  # TODO: move to Hero class
+  def move_player(player, world)
+    player.on_ground = false # NOTE: should reset state overall or think of state management
+    # x-axis
+    player.x += player.dx
+    collision = world.find { |tile| tile.intersect_rect? player }
+    if collision
+      if player.dx > 0
+        player.x = collision.x - player.w
+      elsif player.dx < 0
+        player.x = collision.x + collision.w
       end
-
-      iters += 1
+      player.dx = 0
     end
+
+    # y-axis movement and collisions
+    player.y += player.dy
+    collision = world.find { |tile| tile.intersect_rect? player }
+    return unless collision
+
+    if player.dy > 0
+      player.y = collision.y - player.h
+    elsif player.dy < 0
+      player.on_ground = true
+      player.y = collision.y + collision.h
+    end
+    player.dy = 0.0
+
     # hazards
 
     # enemies
   end
 
   def update
-    handle_collisions
+    move_player(@hero, @level.tiles)
   end
 
   def render
@@ -107,7 +118,7 @@ def go
 end
 
 def reset_game(args)
-  puts 'GAME RESET'
+  puts 'Game reset!'
   args.state.game = Game.new(args)
   args.state.game.args = args
 end
