@@ -11,6 +11,14 @@ class Game
   def initialize(args)
     @hero = Hero.new(128.from_left, args.grid.h / 2.0, 16, 16, Config::SPRITE_HERO)
     @level = Level.new
+    @hero.x = @level.player_spawn.x
+    @hero.y = @level.player_spawn.y
+  end
+
+  def reload
+    level.reload_tileset
+    @hero.x = @level.player_spawn.x
+    @hero.y = @level.player_spawn.y
   end
 
   def tick
@@ -27,65 +35,33 @@ class Game
     args.gtk.toggle_window_fullscreen
   end
 
-  # TODO: add tests for the conditions to avoid having to rethink this when adding velocities ...
-  def resolve_tile_collision(dynamic, tile)
-    overlap_x = if dynamic.x < tile.x
-                  (dynamic.x + dynamic.w) - tile.x
-                else
-                  dynamic.x - (tile.x + tile.w)
-                end
-
-    overlap_y = if dynamic.y < tile.y
-                  (dynamic.y + dynamic.h) - tile.y
-                else
-                  dynamic.y - (tile.y + tile.h)
-                end
-
-    if overlap_x.abs < overlap_y.abs
-      dynamic.vx = 0.0
-      dynamic.x = if dynamic.x < tile.x
-                    tile.x - dynamic.w
-                  else
-                    tile.x + tile.w
-                  end
-    else
-      dynamic.vy = 0.0
-      dynamic.y = if dynamic.y < tile.y
-                    tile.y - dynamic.h
-                  else
-                    dynamic.on_ground = true
-                    tile.y + tile.h
-                  end
-    end
-  end
-
-  # TODO: move to Hero class
-  def move_player(player, world)
-    player.on_ground = false # NOTE: should reset state overall or think of state management
+  # TODO: move to world?
+  def move_entity(entity, world)
+    entity.on_ground = false # NOTE: should reset state overall or think of state management
     # x-axis
-    player.x += player.dx
-    collision = world.find { |tile| tile.intersect_rect? player }
+    entity.x += entity.dx
+    collision = world.find { |collider| collider.intersect_rect? entity }
     if collision
-      if player.dx > 0
-        player.x = collision.x - player.w
-      elsif player.dx < 0
-        player.x = collision.x + collision.w
+      if entity.dx > 0
+        entity.x = collision.x - entity.w
+      elsif entity.dx < 0
+        entity.x = collision.x + collision.w
       end
-      player.dx = 0
+      entity.dx = 0
     end
 
     # y-axis movement and collisions
-    player.y += player.dy
-    collision = world.find { |tile| tile.intersect_rect? player }
+    entity.y += entity.dy
+    collision = world.find { |tile| tile.intersect_rect? entity }
     return unless collision
 
-    if player.dy > 0
-      player.y = collision.y - player.h
-    elsif player.dy < 0
-      player.on_ground = true
-      player.y = collision.y + collision.h
+    if entity.dy > 0
+      entity.y = collision.y - entity.h
+    elsif entity.dy < 0
+      entity.on_ground = true
+      entity.y = collision.y + collision.h
     end
-    player.dy = 0.0
+    entity.dy = 0.0
 
     # hazards
 
@@ -93,14 +69,27 @@ class Game
   end
 
   def update
-    move_player(@hero, @level.tiles)
+    move_entity(@hero, @level.collideables)
+
+    @level.key_collisions @hero
+
+    return if @level.complete
+    return unless @level.entity_on_exit? @hero
+
+    puts 'player on exit!'
   end
 
   def render
     outputs.background_color = [0, 0, 0]
-    outputs.labels << [10.from_left, 200.from_top, 'GameOff \'24 framework tests', 255, 255, 255, 255]
+    outputs.labels << [10.from_left, 200.from_top, "GameOff '24 framework tests", 255, 255, 255, 255]
 
     outputs.solids << @level.tiles
+
+    outputs.solids << @level.exit
+
+    outputs.solids << @level.key_tiles
+
+    outputs.solids << @level.doors
 
     outputs.sprites << @hero
 
@@ -117,10 +106,18 @@ def go
   $gtk.args.state.game
 end
 
+def reload
+  $gtk.args.state.game.reload
+end
+
 def reset_game(args)
   puts 'Game reset!'
   args.state.game = Game.new(args)
   args.state.game.args = args
+end
+
+def reset(_args)
+  puts 'reset called'
 end
 
 def boot(_args)
