@@ -16,7 +16,11 @@ class Game
   end
 
   def reload
-    level.reload_tileset
+    load_level(level.idx)
+  end
+
+  def load_level(idx)
+    @level = Level.new(idx)
     @hero.x = @level.player_spawn.x
     @hero.y = @level.player_spawn.y
   end
@@ -77,6 +81,7 @@ class Game
     return unless @level.entity_on_exit? @hero
 
     puts 'player on exit!'
+    @level = @level.next_level
   end
 
   def render
