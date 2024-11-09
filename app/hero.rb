@@ -6,25 +6,84 @@ class Hero < Sprite
   MaxMoveSpeed = Config::TILE_SIZE
   JumpPower = 40.0
 
-  attr_accessor :state, :dx, :dy, :on_ground
+  attr_accessor :state, :dx, :dy, :on_ground, :rope_head
 
   def initialize(x, y, w = 16.0, h = 16.0, path = Config::SPRITE_PURE_WHITE)
     super
     @dy = 0.0
     @dx = 0.0
     @on_ground = false
+    @rope_head = { x: -100, y: -100, w: 8.0, h: 8.0, r: 20, b: 20, g: 255, a: 255,
+                   anchor_x: 0.5, anchor_y: 0.5 }
+    @state = :idle
   end
 
-  def input(horizontal, vertical)
-    state ||= :idle
+  def rope_length
+    x = @rope_head.x - @x
+    y = @rope_head.y - @y
+    Math.sqrt(x * x + y * y)
+  end
 
+  def rope_midpoint
+    x = (@rope_head.x - @x) / 2.0
+    y = (@rope_head.y - @y) / 2.0
+    { x: x, y: y }
+  end
+
+  def check_rope_collisions(world)
+    return unless @state == :shooting_rope
+
+    rope_collision = world.find { |collider| collider.intersect_rect? @rope_head }
+    return unless rope_collision
+
+    @state = :rope_attached
+  end
+
+  def compute_velocity(inputs)
+    ## Rope handling
+    if inputs.mouse.button_left
+      dx = inputs.mouse.x - x
+      dy = inputs.mouse.y - y
+      len = Math.sqrt(dx * dx + dy * dy)
+      dx /= len
+      dy /= len
+      pa = Math.atan2(dy, dx)
+      @rope_head.angle = pa
+      if @state == :idle
+        # start shooting rope...
+        @rope_head.x = @x
+        @rope_head.y = @y + 16 ## NOTE: will need to remove/rethink this offset if all objects are moved to (0.5,0.5) achors when changing to sprites
+        @state = :shooting_rope
+      end
+
+      if @state == :shooting_rope
+        # continue shooting rope...
+        @rope_head.x += dx * 12.4
+        @rope_head.y += dy * 12.4
+      end
+
+      # puts "I'm attached!" if @state == :rope_attached
+    else
+      @state = :idle
+      @rope_head.x = -100.0
+      @rope_head.y = -100.0
+    end
+
+    ## Pleyer movement
     # NOTE: using magic values for now, until the feel is right...
-    @dx += horizontal * 2.0 # BaseMoveSpeed
+    @dx += inputs.left_right * 2.0 # BaseMoveSpeed
     @dx *= 0.67
-    gf = vertical > 0.0 && @dy > 0.0 ? 0.5 : 1.0
+
+    gf = inputs.up_down > 0.0 && @dy > 0.0 ? 0.5 : 1.0
     @dy -= Config::GRAVITY * gf
-    if @on_ground && vertical > 0.0
+    if @on_ground && inputs.up_down > 0.0
       @dy += 20.0 # JumpPower
+    end
+
+    # TODO: this isn't yet a satisfying way to swing on the rope, will need to be improved
+    if @state == :rope_attached
+      @dy += (@rope_head.y - @y) * 0.02
+      @dx += (@rope_head.x - @x) * 0.01
     end
 
     # movement speed is clamped to a suitable maximum to prevent tunneling through tiles

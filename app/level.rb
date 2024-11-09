@@ -68,7 +68,7 @@ class Level
     @idx = idx
     @player_spawn = { x: 0.0, y: 0.0 }
     # TODO: rethink initialization...
-    @exit = { x: -10.0, y: -10.0, w: 32.0, h: 32.0 }
+    @exit = { x: -100.0, y: -100.0, w: 32.0, h: 32.0 }
     @keys = {}
     @doors = {}
     reload_tileset

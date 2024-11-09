@@ -6,7 +6,7 @@ require_relative 'level'
 class Game
   attr_gtk
 
-  attr_accessor :level
+  attr_accessor :level, :hero
 
   def initialize(args)
     @hero = Hero.new(128.from_left, args.grid.h / 2.0, 16, 16, Config::SPRITE_HERO)
@@ -32,16 +32,15 @@ class Game
   end
 
   def input
-    @hero.input(inputs.left_right, inputs.up_down)
+    @hero.check_rope_collisions(@level.collideables)
+    @hero.compute_velocity(inputs)
 
-    return unless inputs.keyboard.key_down.f
-
-    args.gtk.toggle_window_fullscreen
+    args.gtk.toggle_window_fullscreen if inputs.keyboard.key_down.f
   end
 
   # TODO: move to world?
   def move_entity(entity, world)
-    entity.on_ground = false # NOTE: should reset state overall or think of state management
+    entity.on_ground = false
     # x-axis
     entity.x += entity.dx
     collision = world.find { |collider| collider.intersect_rect? entity }
@@ -66,10 +65,6 @@ class Game
       entity.y = collision.y + collision.h
     end
     entity.dy = 0.0
-
-    # hazards
-
-    # enemies
   end
 
   def update
@@ -86,7 +81,7 @@ class Game
 
   def render
     outputs.background_color = [0, 0, 0]
-    outputs.labels << [10.from_left, 200.from_top, "GameOff '24 framework tests", 255, 255, 255, 255]
+    outputs.labels << [10.from_left, 130.from_top, "rope state: #{@hero.state}", 255, 255, 255, 255]
 
     outputs.solids << @level.tiles
 
@@ -97,6 +92,25 @@ class Game
     outputs.solids << @level.doors
 
     outputs.sprites << @hero
+
+    unless @hero.state == :idle
+      outputs.solids << { x: inputs.mouse.x, y: inputs.mouse.y, w: 12.0, h: 12.0, r: 220, b: 220, g: 220, a: 180,
+                          anchor_x: 0.5, anchor_y: 0.5 }
+      unless @hero.rope_head.nil?
+        outputs.solids << @hero.rope_head
+        mid = @hero.rope_midpoint
+        outputs.sprites << {
+          x: @hero.x + mid.x,
+          y: @hero.y + mid.y,
+          w: 4.0,
+          h: @hero.rope_length,
+          path: :pixel,
+          r: 220.0, g: 220, b: 220, a: 180,
+          achor_x: 0.0, anchor_y: 0.5,
+          angle: geometry.angle_from(@hero, @hero.rope_head) - 90
+        }
+      end
+    end
 
     outputs.primitives << args.gtk.current_framerate_primitives
   end
@@ -130,3 +144,5 @@ def boot(_args)
   # TODO: on a test, debug or release run and set flags accordingly
   # E.g debug assertation setup & skip window creation & what not on tests..
 end
+
+$gtk.warn_array_primitives!
