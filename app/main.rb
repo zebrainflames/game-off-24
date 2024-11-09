@@ -1,4 +1,3 @@
-require_relative 'lib/vectormath_2d'
 require_relative 'config'
 require_relative 'hero'
 require_relative 'level'
@@ -9,7 +8,7 @@ class Game
   attr_accessor :level, :hero
 
   def initialize(args)
-    @hero = Hero.new(128.from_left, args.grid.h / 2.0, 16, 16, Config::SPRITE_HERO)
+    @hero = Hero.new(128.from_left, args.grid.h / 2.0, 16, 16, Config::SPRITE_DEFAULT)
     @level = Level.new
     @hero.x = @level.player_spawn.x
     @hero.y = @level.player_spawn.y
@@ -83,7 +82,10 @@ class Game
     outputs.background_color = [0, 0, 0]
     outputs.labels << [10.from_left, 130.from_top, "rope state: #{@hero.state}", 255, 255, 255, 255]
 
-    outputs.solids << @level.tiles
+    # TODO: use static tiles
+    outputs.sprites << @level.tiles.map do |tile|
+      tile.merge({ path: 'sprites/sprites.png', source_x: 0, source_y: 80, source_w: 16, source_h: 16 })
+    end
 
     outputs.solids << @level.exit
 
@@ -91,7 +93,7 @@ class Game
 
     outputs.solids << @level.doors
 
-    outputs.sprites << @hero
+    outputs.sprites << @hero.sprites
 
     unless @hero.state == :idle
       outputs.solids << { x: inputs.mouse.x, y: inputs.mouse.y, w: 12.0, h: 12.0, r: 220, b: 220, g: 220, a: 180,
@@ -103,10 +105,10 @@ class Game
           x: @hero.x + mid.x,
           y: @hero.y + mid.y,
           w: 4.0,
-          h: @hero.rope_length,
+          h: @hero.rope_length - 8,
           path: :pixel,
           r: 220.0, g: 220, b: 220, a: 180,
-          achor_x: 0.0, anchor_y: 0.5,
+          achor_x: 0.5, anchor_y: 0.5,
           angle: geometry.angle_from(@hero, @hero.rope_head) - 90
         }
       end

@@ -8,7 +8,7 @@ class Hero < Sprite
 
   attr_accessor :state, :dx, :dy, :on_ground, :rope_head
 
-  def initialize(x, y, w = 16.0, h = 16.0, path = Config::SPRITE_PURE_WHITE)
+  def initialize(x, y, w = 16.0, h = 16.0, path = Config::SPRITE_DEFAULT)
     super
     @dy = 0.0
     @dx = 0.0
@@ -16,6 +16,7 @@ class Hero < Sprite
     @rope_head = { x: -100, y: -100, w: 8.0, h: 8.0, r: 20, b: 20, g: 255, a: 255,
                    anchor_x: 0.5, anchor_y: 0.5 }
     @state = :idle
+    @frame_y = 16 * 2 # starting from idle anim frames
   end
 
   def rope_length
@@ -39,6 +40,25 @@ class Hero < Sprite
     @state = :rope_attached
   end
 
+  ## TODO: move rest of player drawing here
+  def sprites
+    @flip_h = true if dx < 0.0
+    @flip_h = false if dx > 0.0
+    @frame_y = if dx.abs <= 0.01
+                 16 * 2
+               else
+                 16 * 3
+               end
+
+    x_index = Numeric.frame_index start_at: 0,
+                                  frame_count: 3,
+                                  repeat: true,
+                                  hold_for: 8
+    @frame_x = 16 * x_index
+    # @frame_y = 16 * 2
+    self
+  end
+
   def compute_velocity(inputs)
     ## Rope handling
     if inputs.mouse.button_left
@@ -50,14 +70,12 @@ class Hero < Sprite
       pa = Math.atan2(dy, dx)
       @rope_head.angle = pa
       if @state == :idle
-        # start shooting rope...
         @rope_head.x = @x
         @rope_head.y = @y + 16 ## NOTE: will need to remove/rethink this offset if all objects are moved to (0.5,0.5) achors when changing to sprites
         @state = :shooting_rope
       end
 
       if @state == :shooting_rope
-        # continue shooting rope...
         @rope_head.x += dx * 12.4
         @rope_head.y += dy * 12.4
       end

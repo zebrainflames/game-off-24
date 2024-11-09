@@ -5,16 +5,12 @@ class Level
 
   SpawnTile = 2
   TargetTile = 3
-  KeyTile = 4
-  DoorTile = 5
-
   # key ids:
   A = 11
   B = 12
   # door ids
   H = 21
   J = 22
-
   @@keys_ids = [A, B]
   @@door_ids = [H, J]
 
@@ -147,8 +143,7 @@ class Level
         next
       end
 
-      @tiles << { x: x * ts, y: y * ts, w: ts, h: ts, r: 20, g: 255, b: 255, a: 255,
-                  primitive_marker: :solid }
+      @tiles << { x: x * ts, y: y * ts, w: ts, h: ts }
     end
   end
 

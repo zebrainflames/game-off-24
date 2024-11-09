@@ -6,6 +6,7 @@ module Config
   # Sprites
   SPRITE_PURE_WHITE = 'sprites/prototyping/pure_white.png'.freeze
   SPRITE_HERO = 'sprites/square/white.png'.freeze
+  SPRITE_DEFAULT = 'sprites/sprites.png'.freeze
 
   # World
   TILE_SIZE = 32
