@@ -31,6 +31,8 @@ class Hero < Sprite
     { x: x, y: y }
   end
 
+  # NOTE: this is a naive implementation; it will tunnel into tiles sometimes. If high speeds for the rope are
+  # needed would need to raycast or at least do sampling.
   def check_rope_collisions(world)
     return unless @state == :shooting_rope
 
@@ -73,9 +75,11 @@ class Hero < Sprite
         @rope_head.x = @x
         @rope_head.y = @y + 16 ## NOTE: will need to remove/rethink this offset if all objects are moved to (0.5,0.5) achors when changing to sprites
         @state = :shooting_rope
+        @prev_rope_head = @rope_head
       end
 
       if @state == :shooting_rope
+        @prev_rope_head = @rope_head
         @rope_head.x += dx * 12.4
         @rope_head.y += dy * 12.4
       end

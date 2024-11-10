@@ -79,25 +79,22 @@ class Game
   end
 
   def render
-    outputs.background_color = [0, 0, 0]
+    outputs.background_color = [32, 40, 61]
     outputs.labels << [10.from_left, 130.from_top, "rope state: #{@hero.state}", 255, 255, 255, 255]
 
     # TODO: use static tiles
     outputs.sprites << @level.tiles.map do |tile|
-      tile.merge({ path: 'sprites/sprites.png', source_x: 0, source_y: 80, source_w: 16, source_h: 16 })
+      tile.merge({ path: 'sprites/sprites.png', source_x: 48, source_y: 80, source_w: 16, source_h: 16 })
     end
 
-    outputs.solids << @level.exit
-
-    outputs.solids << @level.key_tiles
-
-    outputs.solids << @level.doors
-
+    outputs.sprites << @level.exit
+    outputs.sprites << @level.key_tiles
+    outputs.sprites << @level.doors
     outputs.sprites << @hero.sprites
 
     unless @hero.state == :idle
-      outputs.solids << { x: inputs.mouse.x, y: inputs.mouse.y, w: 12.0, h: 12.0, r: 220, b: 220, g: 220, a: 180,
-                          anchor_x: 0.5, anchor_y: 0.5 }
+      outputs.sprites << { x: inputs.mouse.x, y: inputs.mouse.y, w: 12.0, h: 12.0, r: 220, b: 220, g: 220, a: 180,
+                           anchor_x: 0.5, anchor_y: 0.5, path: :pixel }
       unless @hero.rope_head.nil?
         outputs.solids << @hero.rope_head
         mid = @hero.rope_midpoint

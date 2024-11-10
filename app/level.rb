@@ -124,21 +124,24 @@ class Level
       end
       if tile_id == TargetTile
         @exit =
-          { x: x * ts, y: y * ts, w: ts, h: ts, r: 120, g: 255, b: 20, a: 220, primitive_marker: :borders }
+          { x: x * ts, y: y * ts, w: ts, h: ts, path: Config::SPRITE_DEFAULT, source_x: 48, source_y: 48, source_w: 16,
+            source_h: 16 }
         next
       end
 
       if @@keys_ids.include? tile_id
         @keys ||= {}
         @keys[tile_id] =
-          { x: x * ts, y: y * ts, w: ts, h: ts, r: 150, b: 150, g: 0, a: 180, primitive_marker: :borders }
+          # , source_x: 0, source_y: 80, source_w: 16, source_h: 16
+          { x: x * ts, y: y * ts, w: ts, h: 16, path: Config::SPRITE_DEFAULT, source_x: 16, source_y: 64, source_w: 16,
+            source_h: 8 }
         next
       end
 
       if @@door_ids.include? tile_id
         @doors ||= {}
         @doors[tile_id - 10] =
-          { x: x * ts, y: y * ts, w: ts, h: ts, r: 100, b: 150, g: 0, a: 180, primitive_marker: :borders,
+          { x: x * ts + 10, y: y * ts, w: 14, h: ts, path: Config::SPRITE_DEFAULT, source_x: 48 + 5, source_y: 64, source_w: 7, source_h: 16,
             is_open: false }
         next
       end
