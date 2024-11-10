@@ -79,8 +79,8 @@ class Game
   end
 
   def render
-    outputs.background_color = [32, 40, 61]
-    outputs.labels << [10.from_left, 130.from_top, "rope state: #{@hero.state}", 255, 255, 255, 255]
+    outputs.background_color = { r: 32, g: 40, b: 61 }
+    outputs.labels << { x: 10.from_left, y: 130.from_top, text: "rope state: #{@hero.state}", r: 255, g: 255, b: 255 }
 
     # TODO: use static tiles
     outputs.sprites << @level.tiles.map do |tile|
@@ -90,26 +90,8 @@ class Game
     outputs.sprites << @level.exit
     outputs.sprites << @level.key_tiles
     outputs.sprites << @level.doors
-    outputs.sprites << @hero.sprites
-
-    unless @hero.state == :idle
-      outputs.sprites << { x: inputs.mouse.x, y: inputs.mouse.y, w: 12.0, h: 12.0, r: 220, b: 220, g: 220, a: 180,
-                           anchor_x: 0.5, anchor_y: 0.5, path: :pixel }
-      unless @hero.rope_head.nil?
-        outputs.solids << @hero.rope_head
-        mid = @hero.rope_midpoint
-        outputs.sprites << {
-          x: @hero.x + mid.x,
-          y: @hero.y + mid.y,
-          w: 4.0,
-          h: @hero.rope_length - 8,
-          path: :pixel,
-          r: 220.0, g: 220, b: 220, a: 180,
-          achor_x: 0.5, anchor_y: 0.5,
-          angle: geometry.angle_from(@hero, @hero.rope_head) - 90
-        }
-      end
-    end
+    outputs.sprites << @hero.body_sprite
+    outputs.sprites << @hero.rope_sprites(inputs)
 
     outputs.primitives << args.gtk.current_framerate_primitives
   end

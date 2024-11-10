@@ -43,7 +43,7 @@ class Hero < Sprite
   end
 
   ## TODO: move rest of player drawing here
-  def sprites
+  def body_sprite
     @flip_h = true if dx < 0.0
     @flip_h = false if dx > 0.0
     @frame_y = if dx.abs <= 0.01
@@ -57,8 +57,28 @@ class Hero < Sprite
                                   repeat: true,
                                   hold_for: 8
     @frame_x = 16 * x_index
-    # @frame_y = 16 * 2
     self
+  end
+
+  def rope_sprites(inputs)
+    return [] if @state == :idle
+
+    sprites = []
+
+    sprites << { x: inputs.mouse.x, y: inputs.mouse.y, w: 12.0, h: 12.0, r: 220, b: 220, g: 220, a: 180,
+                 anchor_x: 0.5, anchor_y: 0.5, path: :pixel }
+    sprites << @rope_head
+    mid = rope_midpoint
+    sprites << {
+      x: @x + mid.x,
+      y: @y + mid.y,
+      w: 4.0,
+      h: rope_length - 8,
+      path: :pixel,
+      r: 220.0, g: 220, b: 220, a: 180,
+      achor_x: 0.5, anchor_y: 0.5,
+      angle: $geometry.angle_from(self, @rope_head) - 90
+    }
   end
 
   def compute_velocity(inputs)
