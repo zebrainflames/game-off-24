@@ -8,7 +8,7 @@ class Hero < Sprite
 
   attr_accessor :state, :dx, :dy, :on_ground, :rope_head
 
-  def initialize(x, y, w = 16.0, h = 16.0, path = Config::SPRITE_DEFAULT)
+  def initialize(x, y, w = 32.0, h = 32.0, path = Config::SPRITE_DEFAULT)
     super
     @dy = 0.0
     @dx = 0.0
@@ -60,6 +60,7 @@ class Hero < Sprite
     self
   end
 
+  # TODO: rope starting point should be offset from the left bottom corner of the player character
   def rope_sprites(inputs)
     return [] if @state == :idle
 
@@ -81,19 +82,38 @@ class Hero < Sprite
     }
   end
 
+  def dir_from_to(from, to)
+    dx = to.x - from.x
+    dy = to.y - from.y
+    len = Math.sqrt(dx * dx + dy * dy)
+    dx /= len
+    dy /= len
+    [dx, dy]
+  end
+
+  def spring_force(pos_x, pos_y, anchor_x, anchor_y, dx, dy, stiffness: 0.01, damping: 0.05)
+    offset_x = anchor_x - pos_x
+    offset_y = anchor_y - pos_y
+    spf_x = offset_x * stiffness
+    spf_y = offset_y * stiffness
+    damp_x = -dx * damping
+    damp_y = -dy * damping
+    [spf_x + damp_x, spf_y + damp_y]
+  end
+
+  # compute_velocity is the main movement handling function in the game currently.
+  # it does all the key things relating to physics handling, by computing the dx and dy
+  # values per frame (velocities)
+  # NOTE: using magic values for now, until the feel is right...
   def compute_velocity(inputs)
-    ## Rope handling
+    ## Rope handling - done first to ensure the players movement state is correct for velocity updates
     if inputs.mouse.button_left
-      dx = inputs.mouse.x - x
-      dy = inputs.mouse.y - y
-      len = Math.sqrt(dx * dx + dy * dy)
-      dx /= len
-      dy /= len
+      dx, dy = dir_from_to(self, inputs.mouse)
       pa = Math.atan2(dy, dx)
       @rope_head.angle = pa
       if @state == :idle
-        @rope_head.x = @x
-        @rope_head.y = @y + 16 ## NOTE: will need to remove/rethink this offset if all objects are moved to (0.5,0.5) achors when changing to sprites
+        @rope_head.x = @x + 16
+        @rope_head.y = @y + 16
         @state = :shooting_rope
         @prev_rope_head = @rope_head
       end
@@ -103,31 +123,31 @@ class Hero < Sprite
         @rope_head.x += dx * 12.4
         @rope_head.y += dy * 12.4
       end
-
-      # puts "I'm attached!" if @state == :rope_attached
     else
       @state = :idle
       @rope_head.x = -100.0
       @rope_head.y = -100.0
     end
 
-    ## Pleyer movement
-    # NOTE: using magic values for now, until the feel is right...
-    @dx += inputs.left_right * 2.0 # BaseMoveSpeed
-    @dx *= 0.67
-
-    gf = inputs.up_down > 0.0 && @dy > 0.0 ? 0.5 : 1.0
-    @dy -= Config::GRAVITY * gf
-    if @on_ground && inputs.up_down > 0.0
-      @dy += 20.0 # JumpPower
-    end
-
-    # TODO: this isn't yet a satisfying way to swing on the rope, will need to be improved
+    ## Player velocity updates, depending on movement state (i.e. rope is attached or not)
     if @state == :rope_attached
-      @dy += (@rope_head.y - @y) * 0.02
-      @dx += (@rope_head.x - @x) * 0.01
-    end
+      f_x, f_y = spring_force(@x, @y, @rope_head.x, @rope_head.y, @dx, @dy, stiffness: 0.01, damping: 0.03)
+      @dx += f_x
+      @dy += f_y
 
+      # allow the player to also move a bit when using the ninja rope
+      @dx += inputs.left_right * 0.7
+      @dy += inputs.up_down * 0.7
+    else
+      @dx += inputs.left_right * 2.0 # BaseMoveSpeed
+      @dx *= 0.67
+
+      gf = inputs.up_down > 0.0 && @dy > 0.0 ? 0.5 : 1.0
+      @dy -= Config::GRAVITY * gf
+      if @on_ground && inputs.up_down > 0.0
+        @dy += 20.0 # JumpPower
+      end
+    end
     # movement speed is clamped to a suitable maximum to prevent tunneling through tiles
     @dx = @dx.clamp(-MaxMoveSpeed, MaxMoveSpeed)
     @dy = @dy.clamp(-MaxMoveSpeed, MaxMoveSpeed)

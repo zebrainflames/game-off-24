@@ -8,7 +8,7 @@ class Game
   attr_accessor :level, :hero
 
   def initialize(args)
-    @hero = Hero.new(128.from_left, args.grid.h / 2.0, 16, 16, Config::SPRITE_DEFAULT)
+    @hero = Hero.new(128.from_left, args.grid.h / 2.0, 26.0, 26.0, Config::SPRITE_DEFAULT)
     @level = Level.new
     @hero.x = @level.player_spawn.x
     @hero.y = @level.player_spawn.y
@@ -37,7 +37,6 @@ class Game
     args.gtk.toggle_window_fullscreen if inputs.keyboard.key_down.f
   end
 
-  # TODO: move to world?
   def move_entity(entity, world)
     entity.on_ground = false
     # x-axis
