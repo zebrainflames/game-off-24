@@ -14,9 +14,11 @@ class Hero < Sprite
     @dx = 0.0
     @on_ground = false
     @rope_head = { x: -100, y: -100, w: 8.0, h: 8.0, r: 20, b: 20, g: 255, a: 255,
-                   anchor_x: 0.5, anchor_y: 0.5 }
+                   anchor_x: 0.5, anchor_y: 0.5, target_x: 0.0, target_y: 0.0 }
     @state = :idle
     @frame_y = 16 * 2 # starting from idle anim frames
+    @ticks_since_jump = 11
+    @ticks_since_shoot = 30
   end
 
   def rope_length
@@ -101,53 +103,68 @@ class Hero < Sprite
     [spf_x + damp_x, spf_y + damp_y]
   end
 
+  # NOTE: instead of just resetting state we might want to move to some 'reel back in' state or
+  # let the rope head fall with gravity?
+  def reset_rope
+    @state = :idle
+    @rope_head.x = -100.0
+    @rope_head.y = -100.0
+  end
+
+  def handle_rope_shooting(inputs)
+    return reset_rope unless inputs.mouse.button_left
+
+    if @state == :idle && @ticks_since_shoot >= 30
+      @ticks_since_shoot = 0
+      @rope_head.x = @x + 16
+      @rope_head.y = @y + 16
+      @state = :shooting_rope
+      @rope_head.target_x = inputs.mouse.x
+      @rope_head.target_y = inputs.mouse.y
+    end
+
+    if @state == :shooting_rope
+      dx, dy = dir_from_to(self, { x: @rope_head.target_x, y: @rope_head.target_y })
+      rope_angle = Math.atan2(dy, dx)
+      @rope_head.angle = rope_angle
+      @rope_head.x += dx * 12.4
+      @rope_head.y += dy * 12.4
+    end
+    reset_rope if rope_length > Config::TILE_SIZE * 14
+  end
+
+  def calc_movement(inputs)
+    if @state == :rope_attached
+      # rope movement
+      f_x, f_y = spring_force(@x, @y, @rope_head.x, @rope_head.y, @dx, @dy, stiffness: 0.01, damping: 0.03)
+      @dx += f_x + inputs.left_right * 0.7
+      @dy += f_y + inputs.up_down * 0.7
+    else
+      # normal platformer movement
+      @dx += inputs.left_right * 2.0
+      @dx *= 0.67
+
+      gf = inputs.up_down > 0.0 && @dy > 0.0 ? 0.5 : 1.0
+      @dy -= Config::GRAVITY * gf
+
+      if @on_ground && inputs.up_down > 0.0 && @ticks_since_jump >= 12
+        @dy += 20.0 # JumpPower
+        @ticks_since_jump = 0
+      end
+    end
+  end
+
   # compute_velocity is the main movement handling function in the game currently.
   # it does all the key things relating to physics handling, by computing the dx and dy
   # values per frame (velocities)
   # NOTE: using magic values for now, until the feel is right...
   def compute_velocity(inputs)
-    ## Rope handling - done first to ensure the players movement state is correct for velocity updates
-    if inputs.mouse.button_left
-      dx, dy = dir_from_to(self, inputs.mouse)
-      pa = Math.atan2(dy, dx)
-      @rope_head.angle = pa
-      if @state == :idle
-        @rope_head.x = @x + 16
-        @rope_head.y = @y + 16
-        @state = :shooting_rope
-        @prev_rope_head = @rope_head
-      end
+    @ticks_since_jump += 1
+    @ticks_since_shoot += 1
 
-      if @state == :shooting_rope
-        @prev_rope_head = @rope_head
-        @rope_head.x += dx * 12.4
-        @rope_head.y += dy * 12.4
-      end
-    else
-      @state = :idle
-      @rope_head.x = -100.0
-      @rope_head.y = -100.0
-    end
+    handle_rope_shooting(inputs)
+    calc_movement(inputs)
 
-    ## Player velocity updates, depending on movement state (i.e. rope is attached or not)
-    if @state == :rope_attached
-      f_x, f_y = spring_force(@x, @y, @rope_head.x, @rope_head.y, @dx, @dy, stiffness: 0.01, damping: 0.03)
-      @dx += f_x
-      @dy += f_y
-
-      # allow the player to also move a bit when using the ninja rope
-      @dx += inputs.left_right * 0.7
-      @dy += inputs.up_down * 0.7
-    else
-      @dx += inputs.left_right * 2.0 # BaseMoveSpeed
-      @dx *= 0.67
-
-      gf = inputs.up_down > 0.0 && @dy > 0.0 ? 0.5 : 1.0
-      @dy -= Config::GRAVITY * gf
-      if @on_ground && inputs.up_down > 0.0
-        @dy += 20.0 # JumpPower
-      end
-    end
     # movement speed is clamped to a suitable maximum to prevent tunneling through tiles
     @dx = @dx.clamp(-MaxMoveSpeed, MaxMoveSpeed)
     @dy = @dy.clamp(-MaxMoveSpeed, MaxMoveSpeed)

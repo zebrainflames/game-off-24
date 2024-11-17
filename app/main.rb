@@ -80,6 +80,8 @@ class Game
   def render
     outputs.background_color = { r: 32, g: 40, b: 61 }
     outputs.labels << { x: 10.from_left, y: 130.from_top, text: "rope state: #{@hero.state}", r: 255, g: 255, b: 255 }
+    outputs.labels << { x: 10.from_left, y: 155.from_top, text: "on_ground: #{@hero.on_ground}", r: 255, g: 255,
+                        b: 255 }
 
     # TODO: use static tiles
     outputs.sprites << @level.tiles.map do |tile|
